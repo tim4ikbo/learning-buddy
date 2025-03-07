@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { createUser } from "@/api/create_user";
+import { signIn } from "../auth"
 
 export default function SignUpPage() {
   // State for form inputs and error messages
@@ -164,4 +165,7 @@ export default function SignUpPage() {
       </div>
     </div>
   );
+
+      
+    
 }
