@@ -1,9 +1,12 @@
 "use client";
 import { signIn } from "next-auth/react";
 import { useState } from "react";
+import { useSearchParams } from 'next/navigation';
 import { FaGithub, FaGoogle } from "react-icons/fa";
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const mode = searchParams.get('mode');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -11,7 +14,7 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
       setError("");
-      await signIn(provider, { callbackUrl: "/" });
+      await signIn(provider, { callbackUrl: "/pools" });
     } catch (error) {
       setError("An error occurred during sign in. Please try again.");
       console.error("Sign in error:", error);
@@ -24,7 +27,7 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-lg w-96">
         <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-          Welcome to Study Sphere
+          {mode === 'signup' ? 'Create your account' : 'Welcome back'}
         </h2>
 
         <div className="space-y-4">
@@ -35,7 +38,7 @@ export default function LoginPage() {
             className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 rounded-lg px-4 py-2 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FaGoogle className="w-5 h-5 text-red-500" />
-            <span>Continue with Google</span>
+            <span>{mode === 'signup' ? 'Sign up with Google' : 'Continue with Google'}</span>
           </button>
 
           {/* GitHub Sign In */}
@@ -45,7 +48,7 @@ export default function LoginPage() {
             className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white rounded-lg px-4 py-2 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FaGithub className="w-5 h-5" />
-            <span>Continue with GitHub</span>
+            <span>{mode === 'signup' ? 'Sign up with GitHub' : 'Continue with GitHub'}</span>
           </button>
 
           {/* Error Message */}
