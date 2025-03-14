@@ -1,171 +1,70 @@
 "use client";
+import { signIn } from "next-auth/react";
 import { useState } from "react";
-import { createUser } from "@/api/create_user";
-import { signIn } from "../auth"
+import { FaGithub, FaGoogle } from "react-icons/fa";
 
-export default function SignUpPage() {
-  // State for form inputs and error messages
-  const [nickname, setNickname] = useState("");
-  const [age, setAge] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+export default function LoginPage() {
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [alert, setAlert] = useState("");
 
-  // Form submission handler
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validate that passwords match
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    // Validate that all fields are filled
-    if (!nickname || !age || !email || !password) {
-      setError("Please fill in all fields");
-      return;
-    }
-
+  const handleOAuthSignIn = async (provider: "google" | "github") => {
     try {
-      // Call the server-side function to create the user, passing the plain-text password
-      await createUser(nickname, parseInt(age), email, password);
-      setError(""); // Clear any previous errors
-      setAlert("Account created successfully!"); // Simple success feedback
-      // Reset form fields
-      setNickname("");
-      setAge("");
-      setEmail("");
-      setPassword("");
-      setConfirmPassword("");
-      
-    } catch (err) {
-      let errorMessage = "Failed to create account. Email may already be in use.";
-    if (err instanceof Error) {
-      if (err.message.includes("UNIQUE constraint failed")) {
-        errorMessage = "This email is already registered.";
-      } else {
-        errorMessage = `An error occurred: ${err.message}`;
-      }
-    }
-    setError(errorMessage);
+      setIsLoading(true);
+      setError("");
+      await signIn(provider, { callbackUrl: "/" });
+    } catch (error) {
+      setError("An error occurred during sign in. Please try again.");
+      console.error("Sign in error:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-gray-700 p-8 rounded-lg shadow-lg w-96 border border-blue-500">
-        {/* Header */}
-        <h2 className="text-white text-2xl font-bold mb-6 text-center">
-          Sign Up to Study Sphere
+      <div className="bg-white p-8 rounded-lg shadow-lg w-96">
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
+          Welcome to Study Sphere
         </h2>
 
-        {/* Sign-up form */}
-        <form onSubmit={handleSubmit}>
-          {/* Nickname Field */}
-          <div className="mb-4">
-            <label
-              className="block text-white mb-2"
-              htmlFor="nickname"
-            >
-              Nickname
-            </label>
-            <input
-              type="text"
-              id="nickname"
-              className="w-full p-2 rounded-lg bg-white text-black border border-gray-500"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-            />
-          </div>
+        <div className="space-y-4">
+          {/* Google Sign In */}
+          <button
+            onClick={() => handleOAuthSignIn("google")}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 rounded-lg px-4 py-2 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FaGoogle className="w-5 h-5 text-red-500" />
+            <span>Continue with Google</span>
+          </button>
 
-          {/* Age Field */}
-          <div className="mb-4">
-            <label
-              className="block text-white mb-2"
-              htmlFor="age"
-            >
-              Age
-            </label>
-            <input
-              type="number"
-              id="age"
-              className="w-full p-2 rounded-lg bg-white text-black border border-gray-500"
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
-            />
-          </div>
-
-          {/* Email Field */}
-          <div className="mb-4">
-            <label
-              className="block text-white mb-2"
-              htmlFor="email"
-            >
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              className="w-full p-2 rounded-lg bg-white text-black border border-gray-500"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-
-          {/* Password Field */}
-          <div className="mb-4">
-            <label
-              className="block text-white mb-2"
-              htmlFor="password"
-            >
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              className="w-full p-2 rounded-lg bg-white text-black border border-gray-500"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-
-          {/* Confirm Password Field */}
-          <div className="mb-6">
-            <label
-              className="block text-white mb-2"
-              htmlFor="confirmPassword"
-            >
-              Confirm password
-            </label>
-            <input
-              type="password"
-              id="confirmPassword"
-              className="w-full p-2 rounded-lg bg-white text-black border border-gray-500"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
-          </div>
+          {/* GitHub Sign In */}
+          <button
+            onClick={() => handleOAuthSignIn("github")}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white rounded-lg px-4 py-2 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FaGithub className="w-5 h-5" />
+            <span>Continue with GitHub</span>
+          </button>
 
           {/* Error Message */}
-          {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
+          {error && (
+            <div className="text-red-500 text-sm text-center mt-4">{error}</div>
+          )}
 
-          {/* Success Message */}
-          {alert && <p className="text-green-500 mb-4 text-center">{alert}</p>}
-          {/* Submit Button */}
-          <button
-            type="submit"
-            className="w-full bg-black text-white p-2 rounded-full font-bold"
-          >
-            Submit
-          </button>
-        </form>
+          {/* Loading State */}
+          {isLoading && (
+            <div className="text-gray-500 text-sm text-center mt-4">
+              Signing in...
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 text-center text-sm text-gray-500">
+          By continuing, you agree to our Terms of Service and Privacy Policy.
+        </div>
       </div>
     </div>
   );
-
-      
-    
 }

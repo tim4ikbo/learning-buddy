@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1741698157450,
+      "tag": "0000_right_hawkeye",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1741698518564,
+      "tag": "0001_dazzling_roughhouse",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1741700110726,
+      "tag": "0002_unusual_major_mapleleaf",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1741702134788,
+      "tag": "0003_cultured_magik",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1741704319392,
+      "tag": "0004_dear_zombie",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1741769676694,
+      "tag": "0005_hesitant_speed",
+      "breakpoints": true
+    }
+  ]
+}
