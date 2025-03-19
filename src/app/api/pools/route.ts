@@ -19,6 +19,7 @@ export async function GET() {
         name: pools.name,
         createdAt: pools.createdAt,
         memberCount: poolMembers.id,
+        creatorId: pools.creatorId,
       })
       .from(pools)
       .leftJoin(poolMembers, eq(pools.id, poolMembers.poolId))

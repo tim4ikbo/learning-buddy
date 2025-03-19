@@ -2,9 +2,9 @@
 import { Stage, Layer, Rect, Circle, Image } from 'react-konva';
 import useImage from 'use-image';
 
-const LionImage = () => {
+const LionImage: React.FC<any> = (props) => {
     const [image] = useImage('https://konvajs.org/assets/lion.png');
-    return <Image image={image} />;
+    return <Image image={image} {...props}/>;
 };
 
 
@@ -14,8 +14,8 @@ import { useState, useEffect } from "react";
 
 const useInnerSize = () => {
     const [size, setSize] = useState({
-        width: 0,
-        height: 0,
+        width: window.innerWidth,
+        height: window.innerHeight,
     });
 
     useEffect(() => {
@@ -49,7 +49,7 @@ export default function Canvas() {
             <Layer>
                 <Rect width={50} height={50} fill="red" draggable />
                 <Circle x={200} y={200} stroke="black" radius={50} draggable />
-                <LionImage />
+                <LionImage draggable />
             </Layer>
         </Stage>
     );
