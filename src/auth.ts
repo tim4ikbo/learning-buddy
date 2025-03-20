@@ -1,4 +1,4 @@
-import NextAuth, { DefaultSession, Account, Profile } from 'next-auth'
+import NextAuth, { type DefaultSession } from 'next-auth'
 import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import GitHub from 'next-auth/providers/github'
 import Google from 'next-auth/providers/google'
@@ -29,26 +29,15 @@ const customAdapter: Adapter = {
       emailVerified: data.emailVerified ?? null,
       image: data.image ?? null
     }
-    const result = await db.insert(users).values(userData).returning()
-    return result[0] as AdapterUser
+    await db.insert(users).values(userData)
+    return userData as AdapterUser
   },
   linkAccount: async (rawAccount: AdapterAccount): Promise<void> => {
-    const id = createId()
-    const accountData = {
-      id,
-      userId: rawAccount.userId,
-      type: rawAccount.type as string,
-      provider: rawAccount.provider,
-      providerAccountId: rawAccount.providerAccountId,
-      refresh_token: (rawAccount.refresh_token as string) ?? null,
-      access_token: (rawAccount.access_token as string) ?? null,
-      expires_at: rawAccount.expires_at ? Number(rawAccount.expires_at) : null,
-      token_type: (rawAccount.token_type as string) ?? null,
-      scope: (rawAccount.scope as string) ?? null,
-      id_token: (rawAccount.id_token as string) ?? null,
-      session_state: (rawAccount.session_state as string) ?? null
+    const account = {
+      ...rawAccount,
+      id: createId(),
     }
-    await db.insert(accounts).values(accountData)
+    await db.insert(accounts).values(account)
   }
 }
 
@@ -59,63 +48,43 @@ export const authConfig = {
     GitHub({
       clientId: process.env.GITHUB_ID!,
       clientSecret: process.env.GITHUB_SECRET!,
-      allowDangerousEmailAccountLinking: true,
     }),
     Google({
       clientId: process.env.GOOGLE_ID!,
       clientSecret: process.env.GOOGLE_SECRET!,
-      allowDangerousEmailAccountLinking: true,
-      authorization: {
-        params: {
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code"
-        }
-      }
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    signIn: async ({ user, account }) => {
       if (!user.email) {
-        console.error('No email provided in user object:', user)
         return false
       }
 
-      try {
-        // Check if user exists
+      if (account?.provider === 'github') {
         const existingUser = await db.query.users.findFirst({
           where: eq(users.email, user.email),
-          with: {
-            accounts: true
-          }
         })
-        console.log('Existing user data:', existingUser)
 
-        // If we have an account object, log its data
-        if (account) {
-          console.log('Account data:', {
-            userId: user.id,
-            type: account.type,
-            provider: account.provider,
-            providerAccountId: account.providerAccountId,
+        if (!existingUser && customAdapter.createUser) {
+          await customAdapter.createUser({
+            email: user.email,
+            name: user.name,
+            image: user.image,
+            emailVerified: null,
+            id: createId()
           })
         }
-      } catch (error) {
-        console.error('Error in signIn callback:', error)
-        return false
       }
-      
+
       return true
     },
-    async session({ session, token }: { session: ExtendedSession; token: JWT }) {
-      console.log('Session callback:', { session, token })
-      if (session?.user) {
-        session.user.id = token.sub!
+    session: async ({ session, token }: { session: ExtendedSession; token: JWT }) => {
+      if (token.sub && session.user) {
+        session.user.id = token.sub
       }
       return session
     },
-    async jwt({ token, user }: { token: JWT; user?: any }) {
-      console.log('JWT callback:', { token, user })
+    jwt: async ({ token, user }: { token: JWT; user?: any }) => {
       if (user) {
         token.id = user.id
       }
@@ -128,13 +97,13 @@ export const authConfig = {
   },
   logger: {
     error(error: Error) {
-      console.error('AUTH ERROR:', error, error.cause)
+      console.error('Auth error:', error)
     },
     warn(code: string) {
-      console.warn('AUTH WARN:', code)
+      console.warn('Auth warning:', code)
     },
     debug(code: string, metadata?: any) {
-      console.debug('AUTH DEBUG:', code, metadata)
+      console.debug('Auth debug:', code, metadata)
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
@@ -143,4 +112,4 @@ export const authConfig = {
   },
 } satisfies NextAuthConfig
 
-export const { auth, signIn, signOut, handlers: { GET, POST } } = NextAuth(authConfig)
+export const { handlers, auth, signIn, signOut } = NextAuth(authConfig)

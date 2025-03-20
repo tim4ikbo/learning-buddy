@@ -6,8 +6,9 @@ import { auth } from '@/auth'
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = context
   const session = await auth()
 
   if (!session?.user?.id) {
@@ -15,10 +16,11 @@ export async function DELETE(
   }
 
   try {
+    const poolId = params.id
     // Check if user is the creator of the pool
     const pool = await db.query.pools.findFirst({
       where: and(
-        eq(pools.id, params.id),
+        eq(pools.id, poolId),
         eq(pools.creatorId, session.user.id)
       ),
     })
@@ -28,10 +30,10 @@ export async function DELETE(
     }
 
     // Delete pool members first (due to foreign key constraints)
-    await db.delete(poolMembers).where(eq(poolMembers.poolId, params.id))
+    await db.delete(poolMembers).where(eq(poolMembers.poolId, poolId))
     
     // Delete the pool
-    await db.delete(pools).where(eq(pools.id, params.id))
+    await db.delete(pools).where(eq(pools.id, poolId))
 
     return new NextResponse(null, { status: 204 })
   } catch (error) {
@@ -42,8 +44,9 @@ export async function DELETE(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = context
   const session = await auth()
 
   if (!session?.user?.id) {
@@ -51,13 +54,14 @@ export async function PATCH(
   }
 
   try {
+    const poolId = params.id
     const { action } = await request.json()
 
     if (action === 'leave') {
       // Check if user is a member of the pool
       const member = await db.query.poolMembers.findFirst({
         where: and(
-          eq(poolMembers.poolId, params.id),
+          eq(poolMembers.poolId, poolId),
           eq(poolMembers.userId, session.user.id)
         ),
       })
@@ -68,7 +72,7 @@ export async function PATCH(
 
       // Check if user is not the creator (creators can't leave, they must delete)
       const pool = await db.query.pools.findFirst({
-        where: eq(pools.id, params.id),
+        where: eq(pools.id, poolId),
       })
 
       if (pool?.creatorId === session.user.id) {
@@ -78,7 +82,7 @@ export async function PATCH(
       // Remove user from pool
       await db.delete(poolMembers).where(
         and(
-          eq(poolMembers.poolId, params.id),
+          eq(poolMembers.poolId, poolId),
           eq(poolMembers.userId, session.user.id)
         )
       )
