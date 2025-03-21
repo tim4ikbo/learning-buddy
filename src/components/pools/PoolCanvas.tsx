@@ -49,8 +49,14 @@ const PoolImage = ({ url, width, height, x, y, rotation = 0, onDragEnd, onTransf
         y={y}
         rotation={rotation}
         draggable
-        onClick={onSelect}
-        onTap={onSelect}
+        onClick={(e) => {
+          e.cancelBubble = true;
+          onSelect?.();
+        }}
+        onTap={(e) => {
+          e.cancelBubble = true;
+          onSelect?.();
+        }}
         onDragEnd={(e) => {
           onDragEnd?.(e.target.x(), e.target.y());
         }}
@@ -128,9 +134,48 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
         toast.error('No response from upload server');
         return;
       }
+      
+      // Process uploaded files immediately
+      const processImages = async () => {
+        const newImages = await Promise.all(
+          res.map(async (file: { url: string }) => {
+            return new Promise<ImageWithUrl>((resolve) => {
+              const img = new Image();
+              img.onload = () => {
+                // Calculate dimensions while maintaining aspect ratio
+                const maxWidth = stageSize.width * 0.4;
+                const maxHeight = stageSize.height * 0.4;
+                const scale = Math.min(
+                  maxWidth / img.width,
+                  maxHeight / img.height
+                );
+
+                // Calculate random position within stage bounds
+                const x = Math.random() * (stageSize.width - img.width * scale);
+                const y = Math.random() * (stageSize.height - img.height * scale);
+
+                resolve({
+                  url: file.url,
+                  width: img.width * scale,
+                  height: img.height * scale,
+                  x,
+                  y,
+                  rotation: 0,
+                });
+              };
+              img.src = file.url;
+            });
+          })
+        );
+
+        setImages(prev => [...prev, ...newImages]);
+        await saveCanvasState();
+      };
+
+      processImages().catch(console.error);
       setIsUploading(false);
       setUploadProgress(0);
-      toast.success('Upload completed');
+      toast.success(`Successfully uploaded ${res.length} image(s)!`);
     },
     onUploadError: (error: Error) => {
       console.error('Upload error:', error);
@@ -244,7 +289,8 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
     const files = Array.from(e.target.files || []) as File[];
     if (!files.length) return;
 
-    // Reset file input early to prevent duplicate uploads
+    // Reset file input and prevent default behavior
+    e.preventDefault();
     e.target.value = '';
 
     // Validate file types and sizes
@@ -282,8 +328,8 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
       console.log('Starting upload for pool:', params.id);
       const startTime = Date.now();
       
-      // Start upload with proper typing
-      const uploadedFiles = await startUpload(files, {
+      // Start upload and let onClientUploadComplete handle the response
+      await startUpload(files, {
         poolId: params.id
       });
       
@@ -293,70 +339,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
       // Dismiss uploading toast
       toast.dismiss(uploadingToast);
 
-      if (!uploadedFiles || !Array.isArray(uploadedFiles) || uploadedFiles.length === 0) {
-        throw new Error('No files were uploaded successfully');
-      }
-
-      // Validate uploaded files
-      const validFiles = uploadedFiles.filter(file => {
-        if (!file || typeof file !== 'object') {
-          console.error('Invalid file entry:', file);
-          return false;
-        }
-        if (!file.url || typeof file.url !== 'string') {
-          console.error('Invalid file URL:', file);
-          return false;
-        }
-        return true;
-      });
-
-      if (validFiles.length === 0) {
-        throw new Error('No valid files received from server');
-      }
-
-      // Process valid files with stage-aware positioning
-      const newImages = await Promise.all(
-        validFiles.map(async (file, index) => {
-          return new Promise<ImageWithUrl>((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => {
-              // Calculate dimensions while maintaining aspect ratio
-              const maxWidth = stageSize.width * 0.4;
-              const maxHeight = stageSize.height * 0.4;
-              const scale = Math.min(
-                maxWidth / img.width,
-                maxHeight / img.height
-              );
-              
-              // Calculate grid-like positions
-              const cols = Math.ceil(Math.sqrt(validFiles.length));
-              const col = index % cols;
-              const row = Math.floor(index / cols);
-              const padding = 20;
-              
-              resolve({
-                url: file.url,
-                width: img.width * scale,
-                height: img.height * scale,
-                x: (stageSize.width / cols) * col + padding,
-                y: (stageSize.height / cols) * row + padding,
-                rotation: 0,
-              });
-            };
-            img.onerror = () => reject(new Error(`Failed to load image: ${file.url}`));
-            img.src = file.url;
-          });
-        })
-      );
-
-      // Update canvas with new images
-      setImages(prev => [...prev, ...newImages]);
-      
-      // Show success message
-      const successMessage = validFiles.length === files.length
-        ? `Successfully uploaded ${files.length} image${files.length > 1 ? 's' : ''}!`
-        : `Uploaded ${validFiles.length} of ${files.length} images.`;
-      toast.success(successMessage);
+      // File processing is now handled in onClientUploadComplete
 
       // Save canvas state
       await saveCanvasState();
