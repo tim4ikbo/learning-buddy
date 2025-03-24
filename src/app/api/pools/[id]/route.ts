@@ -6,7 +6,7 @@ import { auth } from '@/auth'
 
 export async function DELETE(
   request: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const { params } = context
   const session = await auth()
@@ -16,7 +16,7 @@ export async function DELETE(
   }
 
   try {
-    const poolId = params.id
+    const poolId = (await params).id
     // Check if user is the creator of the pool
     const pool = await db.query.pools.findFirst({
       where: and(
@@ -44,7 +44,7 @@ export async function DELETE(
 
 export async function PATCH(
   request: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const { params } = context
   const session = await auth()
@@ -54,7 +54,7 @@ export async function PATCH(
   }
 
   try {
-    const poolId = params.id
+    const poolId = (await params).id
     const { action } = await request.json()
 
     if (action === 'leave') {

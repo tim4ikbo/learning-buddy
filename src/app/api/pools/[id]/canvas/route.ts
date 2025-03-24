@@ -6,7 +6,7 @@ import { auth } from '@/auth'
 
 export async function GET(
   request: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const { params } = context
   const session = await auth()
@@ -15,7 +15,7 @@ export async function GET(
   }
 
   try {
-    const poolId = params.id
+    const poolId = (await params).id
     const canvas = await db.query.canvases.findFirst({
       where: eq(canvases.poolId, poolId),
     })
@@ -40,7 +40,7 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const { params } = context
   const session = await auth()
@@ -49,7 +49,8 @@ export async function PUT(
   }
 
   try {
-    const poolId = params.id
+    
+    const poolId = (await params).id
     const body = await request.json()
     const { images, lastModified } = body
 

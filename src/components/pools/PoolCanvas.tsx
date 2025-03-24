@@ -222,22 +222,6 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [images, selectedId]);
 
-  // Load canvas state
-  useEffect(() => {
-    const loadCanvasState = async () => {
-      try {
-        const response = await fetch(`/api/pools/${params.id}/canvas`);
-        if (!response.ok) throw new Error('Failed to load canvas');
-        const data: CanvasState = await response.json();
-        setImages(data.images);
-      } catch (error) {
-        console.error('Failed to load canvas state:', error);
-        toast.error('Failed to load canvas state');
-      }
-    };
-
-    loadCanvasState();
-  }, [params.id]);
 
   // Save canvas state
   const saveCanvasState = useCallback(async () => {
@@ -269,16 +253,17 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
     }
   }, [images, params.id]);
 
-  // Auto-save when images change
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (images.length > 0) {
-        saveCanvasState();
-      }
-    }, 2000); // Debounce save for 2 seconds
-
+      const serverLastModified = getLastUpdated(params.id);
+      
+    }, 2000);
     return () => clearTimeout(timeoutId);
-  }, [images, saveCanvasState]);
+  }, []);
+
+  useEffect(() => {
+    saveCanvasState();
+  }, [images]);
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!params.id) {
@@ -393,6 +378,8 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
     loadCanvasState();
   }, [params.id]);
 
+  
+
   // Early return if no pool ID
   if (!params.id) {
     return null;
@@ -431,82 +418,6 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
             e.stopPropagation();
             if (!isUploading) {
               e.currentTarget.classList.remove('border-blue-400', 'bg-blue-50');
-            }
-          }}
-          onClick={() => {
-            if (!isUploading) {
-              const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-              if (input) input.click();
-            }
-          }}
-          onDrop={async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            e.currentTarget.classList.remove('border-blue-400', 'bg-blue-50');
-            
-            if (isUploading) return;
-            
-            const files = Array.from(e.dataTransfer.files);
-            if (files.length === 0) return;
-            
-            // Validate file types and size
-            const invalidFiles = files.filter(file => !file.type.startsWith('image/'));
-            if (invalidFiles.length > 0) {
-              toast.error(
-                `Invalid file type${invalidFiles.length > 1 ? 's' : ''}: ${invalidFiles
-                  .map(f => f.name)
-                  .join(', ')}`
-              );
-              return;
-            }
-            
-            const oversizedFiles = files.filter(file => file.size > 4 * 1024 * 1024);
-            if (oversizedFiles.length > 0) {
-              toast.error(
-                `File${oversizedFiles.length > 1 ? 's' : ''} too large: ${oversizedFiles
-                  .map(f => f.name)
-                  .join(', ')}`
-              );
-              return;
-            }
-            
-            try {
-              setIsUploading(true);
-              setUploadProgress(0);
-              const poolId = params.id;
-              if (!poolId || Array.isArray(poolId)) {
-                toast.error('Invalid pool ID');
-                return;
-              }
-              
-              const uploadedFiles = await startUpload(files as File[], {
-                poolId: poolId,
-              });
-              
-              if (!uploadedFiles) {
-                toast.error('Upload failed. Please try again.');
-                return;
-              }
-              
-              const newImages = uploadedFiles.map((file: { url: string }) => ({
-                url: file.url,
-                width: 200,
-                height: 200,
-                x: Math.random() * 400,
-                y: Math.random() * 300,
-                rotation: 0,
-              }));
-              
-              setImages(prev => [...prev, ...newImages]);
-              toast.success(`Successfully uploaded ${uploadedFiles.length} image(s)!`);
-            } catch (error: any) {
-              console.error('Upload error:', error);
-              toast.error(
-                error?.message || 'Failed to upload images. Please try again.'
-              );
-            } finally {
-              setIsUploading(false);
-              setUploadProgress(0);
             }
           }}
         >
