@@ -1,4 +1,4 @@
-import NextAuth, { type DefaultSession } from 'next-auth'
+import NextAuth, { User, type DefaultSession } from 'next-auth'
 import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import GitHub from 'next-auth/providers/github'
 import Google from 'next-auth/providers/google'
@@ -84,7 +84,7 @@ export const authConfig = {
       }
       return session
     },
-    jwt: async ({ token, user }: { token: JWT; user?: any }) => {
+    jwt: async ({ token, user }: { token: JWT; user?: User }) => {
       if (user) {
         token.id = user.id
       }
@@ -102,7 +102,7 @@ export const authConfig = {
     warn(code: string) {
       console.warn('Auth warning:', code)
     },
-    debug(code: string, metadata?: any) {
+    debug(code: string, metadata?: unknown) {
       console.debug('Auth debug:', code, metadata)
     }
   },

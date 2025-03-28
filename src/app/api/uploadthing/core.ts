@@ -20,7 +20,7 @@ export const ourFileRouter = {
         poolId: z.string().min(1, "Pool ID is required"),
       })
     )
-    .middleware(async ({ input, req }) => {
+    .middleware(async ({ input }) => {
       try {
         // Get the session first to ensure user is authenticated
         const session = await auth();

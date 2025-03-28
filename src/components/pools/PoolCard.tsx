@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { FaUsers, FaRegClock, FaEllipsisH } from 'react-icons/fa'
 import { useRouter } from 'next/navigation'

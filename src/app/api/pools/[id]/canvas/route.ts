@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/db'
 import { canvases } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { auth } from '@/auth'
 
 export async function GET(
@@ -52,7 +52,7 @@ export async function PUT(
     
     const poolId = (await params).id
     const body = await request.json()
-    const { images, lastModified } = body
+    const { images } = body
 
     const existingCanvas = await db.query.canvases.findFirst({
       where: eq(canvases.poolId, poolId),

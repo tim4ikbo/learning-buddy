@@ -3,7 +3,7 @@
 import { PoolCanvas } from '@/components/pools/PoolCanvas';
 import UploadThingProvider from '@/components/providers/UploadThingProvider';
 
-export default function PoolPage({ params }: { params: { id: string } }) {
+export default function PoolPage() {
   return (
     <UploadThingProvider>
       <div className="min-h-screen bg-gray-50">

@@ -234,8 +234,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
       // Prevent saving if no images
       if (images.length === 0) return;
       setIsSaving(true);
-      var lastRememberedModified: number | null = null;
-      lastRememberedModified = Date.now();
+      // let lastRememberedModified = Date.now();
       const response = await fetch(`/api/pools/${params.id}/canvas`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
