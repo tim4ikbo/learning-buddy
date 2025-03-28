@@ -117,7 +117,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
-
+  const [lastRememberedModified, setLastRememberedModified] = useState<number | null>(null);
   // Hooks
   const params = useParams() as Params;
   const stageRef = useRef<any>(null);
@@ -234,6 +234,8 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
       // Prevent saving if no images
       if (images.length === 0) return;
       setIsSaving(true);
+      var lastRememberedModified: number | null = null;
+      lastRememberedModified = Date.now();
       const response = await fetch(`/api/pools/${params.id}/canvas`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -254,16 +256,30 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
   }, [images, params.id]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      const serverLastModified = getLastUpdated(params.id);
-      
+    const timeoutId = setTimeout(async () => {
+      const serverLastModified = await getLastUpdated(params.id);
+      if (serverLastModified === lastRememberedModified) return;
+
+      saveCanvasState();
     }, 2000);
     return () => clearTimeout(timeoutId);
-  }, []);
+  }, [lastRememberedModified]);
 
   useEffect(() => {
     saveCanvasState();
   }, [images]);
+
+  const getLastUpdated = async (poolId: string) => {
+    try {
+      const response = await fetch(`/api/pools/${poolId}/canvas`);
+      if (!response.ok) return null;
+      const data = await response.json() as CanvasState;
+      return data.lastModified;
+    } catch (error) {
+      console.error('Failed to get last updated time:', error);
+      return null;
+    }
+  };
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!params.id) {
