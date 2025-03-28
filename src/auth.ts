@@ -42,7 +42,7 @@ const customAdapter: Adapter = {
 }
 
 export const authConfig = {
-  debug: true,
+  debug: process.env.NODE_ENV === 'development',
   adapter: customAdapter,
   providers: [
     GitHub({
@@ -102,7 +102,7 @@ export const authConfig = {
     warn(code: string) {
       console.warn('Auth warning:', code)
     },
-    debug(code: string, metadata?: unknown) {
+    debug(code: string, metadata?: any) {
       console.debug('Auth debug:', code, metadata)
     }
   },

@@ -45,10 +45,7 @@ export default function PoolsList() {
    * Updates both original and filtered pools in context
    */
   // Set up refetch function in context
-  useEffect(() => {
-    setFilteredPools([])
-    fetchPools()
-  })
+
 
   // Initial fetch
   useEffect(() => {
