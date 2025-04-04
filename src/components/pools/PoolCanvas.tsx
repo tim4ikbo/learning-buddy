@@ -3,6 +3,7 @@
 import { Stage, Layer, Image as KonvaImage, Transformer } from 'react-konva';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUploadThing } from '@/utils/uploadthing';
+// Import removed: utapi is only available server-side
 import useImage from 'use-image';
 import toast from 'react-hot-toast';
 import { useParams } from 'next/navigation';
@@ -205,13 +206,39 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
 
   // Handle keyboard events for delete
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedId !== null) {
-          const newImages = images.filter((_, i) => i !== selectedId);
-          setImages(newImages);
-          setSelectedId(null);
-          toast.success('Image deleted');
+          try {
+            // Extract the file key from the URL
+            const url = images[selectedId].url;
+            const fileKey = url.split('/f/')[1];
+            
+            if (!fileKey) {
+              throw new Error('Could not extract file key from URL');
+            }
+            
+            // Call the API endpoint to delete the file
+            const response = await fetch('/api/uploadthing/delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fileKey }),
+            });
+            
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || 'Failed to delete file');
+            }
+            
+            // Update the UI after successful deletion
+            const newImages = images.filter((_, i) => i !== selectedId);
+            setImages(newImages);
+            setSelectedId(null);
+            toast.success('Image deleted');
+          } catch (error: any) {
+            console.error('Failed to delete image:', error);
+            toast.error(error.message || 'Failed to delete image');
+          }
         }
       } else if (e.key === 'Escape') {
         setSelectedId(null);
@@ -245,7 +272,6 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
       });
 
       if (!response.ok) throw new Error('Failed to save canvas');
-      toast.success('Canvas saved successfully');
     } catch (error) {
       console.error('Failed to save canvas state:', error);
       toast.error('Failed to save canvas state');
