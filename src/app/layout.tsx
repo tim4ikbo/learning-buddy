@@ -16,9 +16,12 @@ export default async function RootLayout({
   children: React.ReactNode
 }) {
   const session = await auth();
-  
+
   return (
     <html lang="en">
+      <head>
+        <script src="https://cdn.jsdelivr.net/pyodide/v0.27.4/full/pyodide.js"></script>
+      </head>
       <body className={inter.className}>
         <SessionProvider session={session}>
           {children}

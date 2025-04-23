@@ -1,11 +1,13 @@
 "use client"
 
-import { Stage, Layer, Image as KonvaImage, Transformer } from 'react-konva';
+import React, { Suspense, lazy } from 'react';
+import { Stage, Layer, Image as KonvaImage, Transformer, Text as KonvaText } from 'react-konva';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUploadThing } from '@/utils/uploadthing';
 // Import removed: utapi is only available server-side
 import useImage from 'use-image';
 import toast from 'react-hot-toast';
+import { Code } from 'lucide-react';
 import { useParams } from 'next/navigation';
 
 type ImageWithUrl = {
@@ -17,8 +19,21 @@ type ImageWithUrl = {
   rotation?: number;
 };
 
+type TextItem = {
+  text: string;
+  x: number;
+  y: number;
+  fontSize: number;
+  fontFamily: string;
+  fill: string;
+  rotation?: number;
+  id: string;
+  isPythonCode?: boolean;
+};
+
 type CanvasState = {
   images: ImageWithUrl[];
+  textItems: TextItem[];
   lastModified: number;
 };
 
@@ -69,7 +84,7 @@ const PoolImage = ({ url, width, height, x, y, rotation = 0, onDragEnd, onTransf
           node.scaleX(1);
           node.scaleY(1);
 
-          onTransform?.({ 
+          onTransform?.({
             width: node.width() * scaleX,
             height: node.height() * scaleY,
             x: node.x(),
@@ -104,7 +119,7 @@ const PoolImage = ({ url, width, height, x, y, rotation = 0, onDragEnd, onTransf
   );
 };
 
-export interface PoolCanvasProps {}
+export interface PoolCanvasProps { }
 
 type Params = {
   id: string;
@@ -113,15 +128,26 @@ type Params = {
 export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
   // State
   const [images, setImages] = useState<ImageWithUrl[]>([]);
+  const [textItems, setTextItems] = useState<TextItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
   const [lastRememberedModified, setLastRememberedModified] = useState<number | null>(null);
+  const [newText, setNewText] = useState('');
+  const [textColor, setTextColor] = useState('#000000');
+  const [isPythonCode, setIsPythonCode] = useState(false);
+  const [showPythonExecutor, setShowPythonExecutor] = useState(false);
+  const [selectedCodeText, setSelectedCodeText] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingText, setEditingText] = useState('');
   // Hooks
   const params = useParams() as Params;
   const stageRef = useRef<any>(null);
+  const trRef = useRef<any>(null);
+
   const { startUpload } = useUploadThing('imageUploader', {
     onUploadProgress: (progress: number) => {
       setUploadProgress(Math.round(progress));
@@ -135,7 +161,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
         toast.error('No response from upload server');
         return;
       }
-      
+
       // Process uploaded files immediately
       const processImages = async () => {
         const newImages = await Promise.all(
@@ -204,32 +230,80 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
-  // Handle keyboard events for delete
+  // Add effect to attach transformer to selected text nodes
+  useEffect(() => {
+    if (selectedTextId && trRef.current) {
+      // Find all text nodes
+      const stage = stageRef.current;
+      if (!stage) return;
+
+      const textNodes = stage.find('Text');
+      // Find the node with matching id
+      const selectedNode = textNodes.find((node: any) => {
+        const textItem = textItems.find(item => item.id === selectedTextId);
+        return textItem &&
+          node.text() === textItem.text &&
+          node.x() === textItem.x &&
+          node.y() === textItem.y;
+      });
+
+      if (selectedNode) {
+        // Attach transformer to the selected node
+        trRef.current.nodes([selectedNode]);
+        trRef.current.getLayer().batchDraw();
+      }
+    } else if (trRef.current) {
+      // Clear nodes when nothing is selected
+      trRef.current.nodes([]);
+      trRef.current.getLayer()?.batchDraw();
+    }
+  }, [selectedTextId, textItems]);
+
+  // Handle keyboard events for delete and edit
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedId !== null) {
+      // Edit with 'E' key
+      if (e.key === 'e' || e.key === 'E') {
+        if (selectedTextId !== null) {
+          const textItem = textItems.find(item => item.id === selectedTextId);
+          if (textItem) {
+            setEditingText(textItem.text);
+            setIsPythonCode(!!textItem.isPythonCode);
+            setTextColor(textItem.isPythonCode ? '#1e40af' : textItem.fill);
+            setIsEditing(true);
+            console.log('Editing text:', textItem.text);
+          }
+        }
+      }
+      // Delete with Delete or Backspace
+      else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedTextId !== null) {
+          // Remove the selected text item
+          setTextItems(prev => prev.filter(item => item.id !== selectedTextId));
+          setSelectedTextId(null);
+          toast.success('Text deleted');
+        } else if (selectedId !== null) {
           try {
             // Extract the file key from the URL
             const url = images[selectedId].url;
             const fileKey = url.split('/f/')[1];
-            
+
             if (!fileKey) {
               throw new Error('Could not extract file key from URL');
             }
-            
+
             // Call the API endpoint to delete the file
             const response = await fetch('/api/uploadthing/delete', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ fileKey }),
             });
-            
+
             if (!response.ok) {
               const errorData = await response.json();
               throw new Error(errorData.error || 'Failed to delete file');
             }
-            
+
             // Update the UI after successful deletion
             const newImages = images.filter((_, i) => i !== selectedId);
             setImages(newImages);
@@ -242,24 +316,25 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
         }
       } else if (e.key === 'Escape') {
         setSelectedId(null);
+        setSelectedTextId(null);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [images, selectedId]);
+  }, [images, selectedId, selectedTextId]);
 
 
   // Save canvas state
   const saveCanvasState = useCallback(async () => {
     if (!params.id) return;
-    
+
     try {
       // Prevent saving if already in progress
       if (isSaving) return;
-      
-      // Prevent saving if no images
-      if (images.length === 0) return;
+
+      // Prevent saving if no content
+      if (images.length === 0 && textItems.length === 0) return;
       setIsSaving(true);
       // let lastRememberedModified = Date.now();
       const response = await fetch(`/api/pools/${params.id}/canvas`, {
@@ -267,6 +342,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           images,
+          textItems,
           lastModified: Date.now(),
         }),
       });
@@ -278,7 +354,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [images, params.id]);
+  }, [images, textItems, params.id]);
 
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
@@ -292,7 +368,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
 
   useEffect(() => {
     saveCanvasState();
-  }, [images]);
+  }, [images, textItems]);
 
   const getLastUpdated = async (poolId: string) => {
     try {
@@ -322,7 +398,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
     // Validate file types and sizes
     const MAX_SIZE = 4 * 1024 * 1024; // 4MB
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    
+
     const validationErrors = files.reduce((errors, file) => {
       if (!ALLOWED_TYPES.includes(file.type)) {
         errors.push(`${file.name} is not a supported image type`);
@@ -345,7 +421,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
     try {
       setIsUploading(true);
       setUploadProgress(0);
-      
+
       // Show upload starting toast
       const uploadingToast = toast.loading(
         `Uploading ${files.length} image${files.length > 1 ? 's' : ''}...`
@@ -353,15 +429,15 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
 
       console.log('Starting upload for pool:', params.id);
       const startTime = Date.now();
-      
+
       // Start upload and let onClientUploadComplete handle the response
       await startUpload(files, {
         poolId: params.id
       });
-      
+
       const uploadTime = Date.now() - startTime;
       console.log('Upload completed in', uploadTime, 'ms');
-      
+
       // Dismiss uploading toast
       toast.dismiss(uploadingToast);
 
@@ -372,7 +448,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
     } catch (error: any) {
       console.error('Upload error:', error);
       let errorMessage = 'Failed to upload images.';
-      
+
       if (error?.message?.includes('sign in')) {
         errorMessage = 'Please sign in to upload images.';
       } else if (error?.message?.includes('access to this pool')) {
@@ -388,7 +464,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
       } else if (error.name === 'NetworkError' || !navigator.onLine) {
         errorMessage = 'Network error. Please check your connection and try again.';
       }
-      
+
       toast.error(errorMessage);
       console.log('Upload failed:', error);
     } finally {
@@ -411,6 +487,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
 
         const data = await response.json() as CanvasState;
         setImages(data.images);
+        setTextItems(data.textItems || []);
       } catch (error) {
         console.error('Failed to load canvas state:', error);
       }
@@ -419,12 +496,42 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
     loadCanvasState();
   }, [params.id]);
 
-  
+
 
   // Early return if no pool ID
   if (!params.id) {
     return null;
   }
+
+  // Add new text to the canvas
+  const handleAddText = () => {
+    if (!newText.trim()) {
+      toast.error('Please enter some text');
+      return;
+    }
+
+    const newTextItem: TextItem = {
+      text: newText,
+      x: Math.random() * (stageSize.width - 200),
+      y: Math.random() * (stageSize.height - 50),
+      fontSize: 20,
+      fontFamily: isPythonCode ? 'Courier New' : 'Arial',
+      fill: isPythonCode ? '#1e40af' : textColor,
+      rotation: 0,
+      id: createId(),
+      isPythonCode
+    };
+
+    setTextItems(prev => [...prev, newTextItem]);
+    setNewText('');
+    setIsPythonCode(false);
+    toast.success(`${isPythonCode ? 'Python code' : 'Text'} added to canvas`);
+  };
+
+  // Helper function to generate unique IDs
+  const createId = () => {
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  };
 
   return (
     <div className="flex flex-col gap-4 w-full max-w-6xl mx-auto p-4">
@@ -432,7 +539,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
       {isUploading && (
         <div className="flex flex-col gap-2">
           <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div 
+            <div
               className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
               style={{ width: `${uploadProgress}%` }}
             />
@@ -444,8 +551,94 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
         </div>
       )}
 
+      {/* Text input section */}
+      <div className="flex flex-col gap-2 p-4 border rounded-lg">
+        <h3 className="font-medium">{isEditing ? 'Edit Text' : 'Add Text to Canvas'}</h3>
+        <div className="flex gap-2">
+          <textarea
+            value={isEditing ? editingText : newText}
+            onChange={(e) => isEditing ? setEditingText(e.target.value) : setNewText(e.target.value)}
+            placeholder={isPythonCode ? "Enter Python code to add to canvas" : "Enter text to add to canvas"}
+            className={`flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${isPythonCode ? 'focus:ring-blue-700 font-mono bg-blue-50' : 'focus:ring-blue-500'}`}
+            rows={isPythonCode ? 4 : 2}
+          />
+          <div className="flex flex-col gap-2">
+            <input
+              type="color"
+              value={textColor}
+              onChange={(e) => setTextColor(e.target.value)}
+              className="w-10 h-10 p-1 border rounded cursor-pointer"
+              title="Choose text color"
+              disabled={isPythonCode}
+            />
+            <button
+              onClick={() => setIsPythonCode(!isPythonCode)}
+              className={`w-10 h-10 flex items-center justify-center rounded-md ${isPythonCode ? 'bg-blue-700 text-white' : 'bg-gray-200 text-gray-700'}`}
+              title={isPythonCode ? "Switch to regular text" : "Switch to Python code"}
+            >
+              <Code size={20} />
+            </button>
+          </div>
+          {isEditing ? (
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  if (selectedTextId) {
+                    const updatedTextItems = textItems.map(item => {
+                      if (item.id === selectedTextId) {
+                        return {
+                          ...item,
+                          text: editingText,
+                          fill: isPythonCode ? '#1e40af' : textColor,
+                          fontFamily: isPythonCode ? 'Courier New' : 'Arial',
+                          isPythonCode
+                        };
+                      }
+                      return item;
+                    });
+                    setTextItems(updatedTextItems);
+                    setIsEditing(false);
+                    setSelectedTextId(null);
+                    toast.success('Text updated');
+                  }
+                }}
+                className={`px-4 py-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${isPythonCode ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-600 hover:bg-blue-700'}`}
+              >
+                Save Changes
+              </button>
+              <button
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditingText('');
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleAddText}
+              className={`px-4 py-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${isPythonCode ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-600 hover:bg-blue-700'}`}
+            >
+              {isPythonCode ? 'Add Python Code' : 'Add Text'}
+            </button>
+          )}
+        </div>
+        <div className="flex justify-between">
+          <p className="text-sm text-gray-500">
+            {isEditing ?
+              'Edit your text and click Save Changes when done.' :
+              'Tip: After adding text, you can drag it around the canvas. Press E to edit or Delete to remove it.'}
+          </p>
+          {isPythonCode && !isEditing && (
+            <p className="text-sm text-blue-600">Python code can be executed by double-clicking it on the canvas.</p>
+          )}
+        </div>
+      </div>
+
       <div className="flex flex-col gap-4">
-        <div 
+        <div
           className={`relative rounded-lg border-2 ${isUploading ? 'border-blue-400' : 'border-dashed border-gray-300'} p-8 transition-all duration-200 ${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-blue-400 hover:bg-blue-50'}`}
           onDragOver={(e) => {
             e.preventDefault();
@@ -484,7 +677,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
           {isUploading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/50">
               <div className="w-48 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-blue-600 transition-all duration-300 ease-in-out"
                   style={{ width: `${uploadProgress}%` }}
                 />
@@ -505,11 +698,11 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
         </div>
       </div>
       <div id="canvas-container" className="w-full min-h-[600px] relative bg-gray-50 p-4 rounded-lg shadow-sm">
-        <Stage 
+        <Stage
           ref={stageRef}
-          width={stageSize.width} 
+          width={stageSize.width}
           height={stageSize.height}
-          style={{ 
+          style={{
             border: '1px solid #ddd',
             background: 'white',
             borderRadius: '0.5rem',
@@ -519,31 +712,155 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
             // Deselect when clicking on the stage background
             if (e.target === e.target.getStage()) {
               setSelectedId(null);
+              setSelectedTextId(null);
             }
           }}
         >
-        <Layer>
-          {images.map((image, i) => (
-            <PoolImage 
-              key={i} 
-              {...image} 
-              isSelected={selectedId === i}
-              onSelect={() => setSelectedId(i)}
-              onDragEnd={(newX, newY) => {
-                const newImages = [...images];
-                newImages[i] = { ...image, x: newX, y: newY };
-                setImages(newImages);
-              }}
-              onTransform={(newProps) => {
-                const newImages = [...images];
-                newImages[i] = { ...image, ...newProps };
-                setImages(newImages);
-              }}
-            />
-          ))}
-        </Layer>
+          <Layer>
+            {images.map((image, i) => (
+              <PoolImage
+                key={i}
+                {...image}
+                isSelected={selectedId === i}
+                onSelect={() => {
+                  setSelectedId(i);
+                  setSelectedTextId(null);
+                }}
+                onDragEnd={(newX, newY) => {
+                  const newImages = [...images];
+                  newImages[i] = { ...image, x: newX, y: newY };
+                  setImages(newImages);
+                }}
+                onTransform={(newProps) => {
+                  const newImages = [...images];
+                  newImages[i] = { ...image, ...newProps };
+                  setImages(newImages);
+                }}
+              />
+            ))}
+
+            {textItems.map((textItem) => {
+              const isSelected = selectedTextId === textItem.id;
+              return (
+                <React.Fragment key={textItem.id}>
+                  <KonvaText
+                    text={textItem.text}
+                    x={textItem.x}
+                    y={textItem.y}
+                    fontSize={textItem.fontSize}
+                    fontFamily={textItem.fontFamily}
+                    fill={textItem.fill}
+                    rotation={textItem.rotation || 0}
+                    draggable
+                    onClick={(e) => {
+                      e.cancelBubble = true;
+                      setSelectedTextId(textItem.id);
+                      setSelectedId(null);
+                    }}
+                    onTap={(e) => {
+                      e.cancelBubble = true;
+                      setSelectedTextId(textItem.id);
+                      setSelectedId(null);
+                    }}
+
+                    onDblTap={(e) => {
+                      e.cancelBubble = true;
+                      if (textItem.isPythonCode) {
+                        setSelectedCodeText(textItem.text);
+                        setShowPythonExecutor(true);
+                      } else {
+                        // Edit on double-tap for regular text
+                        setEditingText(textItem.text);
+                        setIsPythonCode(!!textItem.isPythonCode);
+                        setTextColor(textItem.fill);
+                        setIsEditing(true);
+                      }
+                    }}
+                    onDblClick={(e) => {
+                      if (textItem.isPythonCode) {
+                        e.cancelBubble = true;
+                        setSelectedCodeText(textItem.text);
+                        setShowPythonExecutor(true);
+                      }
+                    }}
+                    onDragEnd={(e) => {
+                      const newTextItems = textItems.map(item => {
+                        if (item.id === textItem.id) {
+                          return {
+                            ...item,
+                            x: e.target.x(),
+                            y: e.target.y()
+                          };
+                        }
+                        return item;
+                      });
+                      setTextItems(newTextItems);
+                    }}
+                  />
+                  {isSelected && (
+                    <Transformer
+                      ref={trRef}
+                      boundBoxFunc={(oldBox, newBox) => {
+                        // Limit resize
+                        if (newBox.width < 5 || newBox.height < 5) {
+                          return oldBox;
+                        }
+                        return newBox;
+                      }}
+                      onTransformEnd={() => {
+                        // Get the transformer node
+                        const node = trRef.current.nodes()[0];
+                        if (node) {
+                          const scaleX = node.scaleX();
+
+                          // Update the text item with new properties
+                          const updatedTextItems = textItems.map(item => {
+                            if (item.id === textItem.id) {
+                              return {
+                                ...item,
+                                x: node.x(),
+                                y: node.y(),
+                                rotation: node.rotation(),
+                                fontSize: Math.round(item.fontSize * scaleX), // Scale font size based on transform
+                              };
+                            }
+                            return item;
+                          });
+                          setTextItems(updatedTextItems);
+
+                          // Reset scale on the node itself
+                          node.scaleX(1);
+                          node.scaleY(1);
+                        }
+                      }}
+                    />)}
+                </React.Fragment>
+              );
+            })}
+          </Layer>
         </Stage>
       </div>
+
+      {/* Python Code Executor Modal */}
+      {showPythonExecutor && (
+        <Suspense fallback={<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <p className="text-lg">Loading Python interpreter...</p>
+          </div>
+        </div>}>
+          <PythonCodeExecutorModal
+            code={selectedCodeText}
+            onClose={() => setShowPythonExecutor(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };
+
+// Lazy load the Python executor to reduce initial bundle size
+const PythonCodeExecutorModal = lazy(() =>
+  import('./PythonCodeExecutor').then(module => ({
+    default: module.PythonCodeExecutor
+  }))
+);

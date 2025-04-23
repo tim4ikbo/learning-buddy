@@ -28,8 +28,12 @@ export async function GET(
       })
     }
 
+    // Parse the canvas content
+    const content = JSON.parse(canvas.content || '{}');
+    
     return NextResponse.json({
-      images: JSON.parse(canvas.content || '[]'),
+      images: content.images || [],
+      textItems: content.textItems || [],
       lastModified: canvas.updatedAt?.getTime() || Date.now(),
     })
   } catch (error) {
@@ -52,7 +56,7 @@ export async function PUT(
     
     const poolId = (await params).id
     const body = await request.json()
-    const { images } = body
+    const { images, textItems } = body
 
     const existingCanvas = await db.query.canvases.findFirst({
       where: eq(canvases.poolId, poolId),
@@ -62,7 +66,7 @@ export async function PUT(
       await db
         .update(canvases)
         .set({
-          content: JSON.stringify(images),
+          content: JSON.stringify({ images, textItems }),
           updatedAt: new Date(),
         })
         .where(eq(canvases.id, existingCanvas.id))
@@ -71,7 +75,7 @@ export async function PUT(
         name: 'Pool Canvas',
         poolId: poolId,
         creatorId: session.user.id,
-        content: JSON.stringify(images),
+        content: JSON.stringify({ images, textItems }),
         createdAt: new Date(),
         updatedAt: new Date(),
       })
