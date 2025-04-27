@@ -135,8 +135,8 @@ export default function PoolCard({ pool, userId }: PoolCardProps) {
         {/* Pool statistics section */}
         <div className="space-y-2">
           <div className="flex items-center text-gray-600">
-            <FaUsers className="w-4 h-4 mr-2" />
-            <span className="text-sm">{pool.memberCount} members</span>
+            <FaUsers className="w-4 h-4 mr-2" />  
+            {pool.memberCount === 1 ? '1 member' : `${pool.memberCount} members`}
           </div>
           <div className="flex items-center text-gray-600">
             <FaRegClock className="w-4 h-4 mr-2" />

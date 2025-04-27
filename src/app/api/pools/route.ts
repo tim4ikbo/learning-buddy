@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/db'
 import { pools, poolMembers } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { auth } from '@/auth'
 
@@ -13,18 +13,28 @@ export async function GET() {
   }
 
   try {
-    const userPools = await db
+    // Fetch pools where the user is a member and count members per pool
+    const userPoolsRaw = await db
       .select({
         id: pools.id,
         name: pools.name,
         createdAt: pools.createdAt,
-        memberCount: poolMembers.id,
         creatorId: pools.creatorId,
       })
       .from(pools)
       .leftJoin(poolMembers, eq(pools.id, poolMembers.poolId))
       .where(eq(poolMembers.userId, session.user.id))
       .groupBy(pools.id)
+
+    // For each pool, count the number of members using Drizzle's select and count
+    const userPools = await Promise.all(
+      userPoolsRaw.map(async (pool) => {
+        const [{ count }] = await db.select({ count: sql`count(*)`.as('count') })
+          .from(poolMembers)
+          .where(eq(poolMembers.poolId, pool.id));
+        return { ...pool, memberCount: Number(count) };
+      })
+    );
 
     return NextResponse.json(userPools)
   } catch (error) {
