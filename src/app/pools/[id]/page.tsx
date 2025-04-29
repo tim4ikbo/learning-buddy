@@ -7,13 +7,17 @@ import { AddPoolMemberButton } from '@/components/pools/AddPoolMemberButton';
 import { PoolMembersList } from '@/components/pools/PoolMembersList';
 import UploadThingProvider from '@/components/providers/UploadThingProvider';
 
+// Pool page component for collaborative canvas and member management
 export default function PoolPage() {
+  // Get route parameters and router instance
   const params = useParams();
   const router = useRouter();
+  // State for access check and loading indicator
   const [isLoading, setIsLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const poolId = params.id as string;
 
+  // Check if the user has access to the pool on mount
   useEffect(() => {
     const checkAccess = async () => {
       try {
@@ -36,6 +40,7 @@ export default function PoolPage() {
     checkAccess();
   }, [poolId, router]);
 
+  // Show loading indicator while checking access
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -44,6 +49,7 @@ export default function PoolPage() {
     );
   }
 
+  // If user has no access, nothing is rendered (redirect handled by useEffect)
   if (!hasAccess) {
     return null; // Will be redirected by the useEffect
   }

@@ -1,9 +1,11 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
+// InputProps interface extends native input props for flexibility
 export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {}
 
+// Input component: styled input with ref forwarding and Tailwind styling
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, ...props }, ref) => {
     return (
@@ -21,4 +23,5 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
 )
 Input.displayName = "Input"
 
+// Export the Input component for use in forms and UI
 export { Input }

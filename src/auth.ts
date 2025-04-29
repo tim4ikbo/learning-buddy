@@ -55,6 +55,9 @@ export const authConfig = {
     }),
   ],
   callbacks: {
+    // signIn callback: runs on user sign-in attempt
+    // - Ensures email is present
+    // - For GitHub, creates a new user if one doesn't exist
     signIn: async ({ user, account }) => {
       if (!user.email) {
         return false
@@ -65,6 +68,7 @@ export const authConfig = {
           where: eq(users.email, user.email),
         })
 
+        // If user does not exist, create a new user record
         if (!existingUser && customAdapter.createUser) {
           await customAdapter.createUser({
             email: user.email,
@@ -78,12 +82,14 @@ export const authConfig = {
 
       return true
     },
+    // session callback: attaches user ID to session object
     session: async ({ session, token }: { session: ExtendedSession; token: JWT }) => {
       if (token.sub && session.user) {
         session.user.id = token.sub
       }
       return session
     },
+    // jwt callback: attaches user ID to JWT token
     jwt: async ({ token, user }: { token: JWT; user?: User }) => {
       if (user) {
         token.id = user.id
@@ -91,10 +97,12 @@ export const authConfig = {
       return token
     }
   },
+  // Custom authentication pages
   pages: {
-    signIn: '/login',
-    error: '/auth/error',
+    signIn: '/login',         // Custom sign-in page
+    error: '/auth/error',     // Custom error page
   },
+  // Custom logger for authentication events
   logger: {
     error(error: Error) {
       console.error('Auth error:', error)

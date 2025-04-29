@@ -78,6 +78,7 @@ const DialogFooter = ({
 )
 DialogFooter.displayName = "DialogFooter"
 
+// DialogTitle component: styled dialog title with ref forwarding
 const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
@@ -93,6 +94,7 @@ const DialogTitle = React.forwardRef<
 ))
 DialogTitle.displayName = DialogPrimitive.Title.displayName
 
+// DialogDescription component: styled dialog description with ref forwarding
 const DialogDescription = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
@@ -105,6 +107,7 @@ const DialogDescription = React.forwardRef<
 ))
 DialogDescription.displayName = DialogPrimitive.Description.displayName
 
+// Export all dialog-related components for modular usage
 export {
   Dialog,
   DialogPortal,

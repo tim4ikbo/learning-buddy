@@ -4,17 +4,21 @@ import { useState } from "react";
 import { useSearchParams } from 'next/navigation';
 import { FaGithub, FaGoogle } from "react-icons/fa";
 
+// Login page component for user authentication
 export default function LoginPage() {
+  // Get URL search parameters to determine mode (login/signup)
   const searchParams = useSearchParams();
   const mode = searchParams.get('mode');
+  // State for loading indicator and error messages
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Handle OAuth sign-in for Google or GitHub
   const handleOAuthSignIn = async (provider: "google" | "github") => {
     try {
       setIsLoading(true);
       setError("");
-      await signIn(provider, { callbackUrl: "/pools" });
+      await signIn(provider, { callbackUrl: "/pools" }); // Redirect after successful sign-in
     } catch (error) {
       setError("An error occurred during sign in. Please try again.");
       console.error("Sign in error:", error);
@@ -23,6 +27,8 @@ export default function LoginPage() {
     }
   };
 
+
+  // Render the login/signup UI with OAuth buttons
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-lg w-96">

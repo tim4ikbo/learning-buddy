@@ -4,6 +4,7 @@ import { pools, poolMembers } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { auth } from '@/auth'
 
+// DELETE handler to remove a pool and its members
 export async function DELETE(
   request: Request,
   context: { params: Promise<{ id: string }> }
@@ -16,8 +17,9 @@ export async function DELETE(
   }
 
   try {
+    // Extract pool ID from route parameters
     const poolId = (await params).id
-    // Check if user is the creator of the pool
+    // Check if the current user is the creator of the pool
     const pool = await db.query.pools.findFirst({
       where: and(
         eq(pools.id, poolId),
@@ -25,18 +27,21 @@ export async function DELETE(
       ),
     })
 
+    // Only the creator can delete the pool
     if (!pool) {
       return new NextResponse('Not found or not authorized', { status: 404 })
     }
 
-    // Delete pool members first (due to foreign key constraints)
+    // Delete all pool members first (to satisfy foreign key constraints)
     await db.delete(poolMembers).where(eq(poolMembers.poolId, poolId))
     
-    // Delete the pool
+    // Delete the pool itself
     await db.delete(pools).where(eq(pools.id, poolId))
 
+    // Respond with 204 No Content on success
     return new NextResponse(null, { status: 204 })
   } catch (error) {
+    // Log and handle unexpected errors
     console.error('Error deleting pool:', error)
     return new NextResponse('Internal Server Error', { status: 500 })
   }

@@ -6,16 +6,21 @@ import { UserPlus } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useParams } from 'next/navigation'
 
+// Button and dialog component for adding a new member to a pool
 export function AddPoolMemberButton() {
+  // State for email input, loading indicator, and dialog open/close
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
+  // Get pool ID from route parameters
   const params = useParams()
   const poolId = params.id as string
 
+  // Handle form submission to add a new member
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Validate email format
     if (!email || !email.includes('@')) {
       toast.error('Please enter a valid email address')
       return
@@ -24,6 +29,7 @@ export function AddPoolMemberButton() {
     setIsLoading(true)
     
     try {
+      // Send POST request to add member to the pool
       const response = await fetch(`/api/pools/${poolId}/members`, {
         method: 'POST',
         headers: {
@@ -32,15 +38,18 @@ export function AddPoolMemberButton() {
         body: JSON.stringify({ email }),
       })
       
+      // Handle API errors
       if (!response.ok) {
         const errorData = await response.json().catch(() => null)
         throw new Error(errorData?.message || response.statusText)
       }
       
+      // Show success notification and reset state
       toast.success(`Successfully added ${email} to the pool`)
       setEmail('')
       setIsOpen(false)
     } catch (error: any) {
+      // Handle specific error messages and show notifications
       console.error('Error adding member:', error)
       
       if (error.message === 'User not found') {

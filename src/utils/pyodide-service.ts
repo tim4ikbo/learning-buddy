@@ -1,24 +1,25 @@
 'use client';
 
-// This file contains client-side only code
+// This file contains client-side only code for Pyodide integration
 
-// Type definitions for Pyodide interface - more permissive to handle actual API
+// Type definitions for Pyodide interface - permissive to match Pyodide API
 interface PyodideInterface {
   runPython: (code: string) => any;
   runPythonAsync: (code: string) => Promise<any>;
   loadPackagesFromImports: (imports: string) => Promise<any>;
 }
 
-// Track the Pyodide instance and loading state
+// Track the Pyodide instance and loading state (singleton pattern)
 let pyodideInstance: PyodideInterface | null = null;
 let pyodideLoading: Promise<PyodideInterface> | null = null;
 
-// Maximum execution time in milliseconds
+// Maximum execution time for Python code (ms)
 const MAX_EXECUTION_TIME = 5000;
 
 /**
  * Initialize Pyodide and return the instance
- * This is a client-side only function
+ * Loads the Pyodide script, sets up the environment, and caches the instance.
+ * Ensures only one instance is loaded and only on the client side.
  */
 export async function initPyodide(): Promise<PyodideInterface> {
   // If already loaded, return the instance

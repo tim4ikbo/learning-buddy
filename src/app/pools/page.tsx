@@ -5,13 +5,17 @@ import PoolsList from '@/components/pools/PoolsList'
 import PoolsHeader from '@/components/pools/PoolsHeader'
 import { PoolProvider } from '@/context/PoolContext'
 
+// Pools page component for listing and creating study pools
 export default async function PoolsPage() {
+  // Authenticate the user
   const session = await auth()
 
+  // Redirect to login if not authenticated
   if (!session) {
     redirect('/login')
   }
 
+  // Render the pools UI within the PoolProvider context
   return (
     <PoolProvider>
       <div className="min-h-screen bg-gray-50">

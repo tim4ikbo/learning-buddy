@@ -5,6 +5,7 @@ import { and, eq } from 'drizzle-orm'
 import { auth } from '@/auth'
 import { nanoid } from 'nanoid'
 
+// POST handler to add a new member to a specific pool
 export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> }
@@ -17,14 +18,17 @@ export async function POST(
   }
 
   try {
+    // Extract pool ID from route parameters
     const poolId = (await params).id
+    // Parse request body for user email
     const { email } = await request.json()
 
+    // Validate that an email was provided
     if (!email) {
       return new NextResponse('Email is required', { status: 400 })
     }
 
-    // Check if user is an admin of the pool
+    // Check if current user is an admin of the pool
     const member = await db.query.poolMembers.findFirst({
       where: and(
         eq(poolMembers.poolId, poolId),
@@ -33,20 +37,22 @@ export async function POST(
       ),
     })
 
+    // Only admins can add new members
     if (!member) {
       return new NextResponse('Not authorized to add members', { status: 403 })
     }
 
-    // Find user by email
+    // Find the user to add by email
     const user = await db.query.users.findFirst({
       where: eq(users.email, email),
     })
 
+    // Return 404 if user does not exist
     if (!user) {
       return new NextResponse('User not found', { status: 404 })
     }
 
-    // Check if user is already a member
+    // Check if user is already a member of the pool
     const existingMember = await db.query.poolMembers.findFirst({
       where: and(
         eq(poolMembers.poolId, poolId),
@@ -54,6 +60,7 @@ export async function POST(
       ),
     })
 
+    // Prevent adding duplicate members
     if (existingMember) {
       return new NextResponse('User is already a member of this pool', { status: 409 })
     }

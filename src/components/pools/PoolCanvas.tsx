@@ -148,28 +148,32 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
   const stageRef = useRef<any>(null);
   const trRef = useRef<any>(null);
 
+  // Set up UploadThing for image uploads, with progress and completion handlers
   const { startUpload } = useUploadThing('imageUploader', {
+    // Update upload progress percentage
     onUploadProgress: (progress: number) => {
       setUploadProgress(Math.round(progress));
     },
+    // Set uploading state when upload begins
     onUploadBegin: () => {
       setIsUploading(true);
       setUploadProgress(0);
     },
+    // Handle completion of client-side upload
     onClientUploadComplete: (res) => {
       if (!res?.[0]) {
         toast.error('No response from upload server');
         return;
       }
 
-      // Process uploaded files immediately
+      // Process uploaded files immediately after upload
       const processImages = async () => {
         const newImages = await Promise.all(
           res.map(async (file: { url: string }) => {
             return new Promise<ImageWithUrl>((resolve) => {
               const img = new Image();
               img.onload = () => {
-                // Calculate dimensions while maintaining aspect ratio
+                // Scale image to fit within 40% of stage, maintaining aspect ratio
                 const maxWidth = stageSize.width * 0.4;
                 const maxHeight = stageSize.height * 0.4;
                 const scale = Math.min(
@@ -177,7 +181,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
                   maxHeight / img.height
                 );
 
-                // Calculate random position within stage bounds
+                // Place image at a random position within the stage bounds
                 const x = Math.random() * (stageSize.width - img.width * scale);
                 const y = Math.random() * (stageSize.height - img.height * scale);
 

@@ -42,6 +42,7 @@ export async function GET(
   }
 }
 
+// PUT handler to update or create a canvas for a specific pool
 export async function PUT(
   request: Request,
   context: { params: Promise<{ id: string }> }
@@ -54,15 +55,19 @@ export async function PUT(
 
   try {
     
+    // Extract pool ID from route parameters
     const poolId = (await params).id
+    // Parse request body for images and text items
     const body = await request.json()
     const { images, textItems } = body
 
+    // Check if a canvas already exists for this pool
     const existingCanvas = await db.query.canvases.findFirst({
       where: eq(canvases.poolId, poolId),
     })
 
     if (existingCanvas) {
+      // Update the existing canvas with new content and timestamp
       await db
         .update(canvases)
         .set({
@@ -71,6 +76,7 @@ export async function PUT(
         })
         .where(eq(canvases.id, existingCanvas.id))
     } else {
+      // Create a new canvas entry for the pool
       await db.insert(canvases).values({
         name: 'Pool Canvas',
         poolId: poolId,
@@ -83,6 +89,7 @@ export async function PUT(
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    // Log and handle unexpected errors
     console.error('Failed to update canvas:', error)
     return new NextResponse('Internal Server Error', { status: 500 })
   }

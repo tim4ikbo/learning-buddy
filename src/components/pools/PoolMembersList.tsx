@@ -14,13 +14,17 @@ type PoolMember = {
   image: string | null
 }
 
+// Component for displaying the list of pool members
 export function PoolMembersList() {
+  // State for list of members, loading indicator, and error messages
   const [members, setMembers] = useState<PoolMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Get pool ID from route parameters
   const params = useParams()
   const poolId = params.id as string
 
+  // Fetch pool members from the API when the component mounts or poolId changes
   useEffect(() => {
     const fetchMembers = async () => {
       setIsLoading(true)
@@ -46,6 +50,7 @@ export function PoolMembersList() {
     fetchMembers()
   }, [poolId])
 
+  // Show loading indicator while fetching members
   if (isLoading) {
     return (
       <div className="p-4 text-center">
@@ -54,6 +59,7 @@ export function PoolMembersList() {
     )
   }
 
+  // Show error message if fetching fails
   if (error) {
     return (
       <div className="p-4 text-center text-red-500">

@@ -44,6 +44,7 @@ interface PoolCardProps {
  * @param {PoolCardProps} props - Component props
  * @returns {JSX.Element} Card displaying pool information and actions
  */
+// Card component that displays a study pool's information and actions
 export default function PoolCard({ pool, userId }: PoolCardProps) {
   // State to control dropdown menu visibility
   const [isMenuOpen, setIsMenuOpen] = useState(false)

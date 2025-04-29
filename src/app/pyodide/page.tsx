@@ -3,7 +3,9 @@
 import React, { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
+// Type definition for Pyodide execution result
 // Import types only for TypeScript
+// (not included in the bundle)
 type PyodideResult = {
   result: string;
   error: string | null;
@@ -11,10 +13,12 @@ type PyodideResult = {
   stderr: string;
 };
 
-// We'll load these dynamically at runtime
+// Pyodide initialization and code execution functions
+// (loaded dynamically at runtime)
 let initPyodide: () => Promise<any>;
 let runPythonCode: (code: string) => Promise<PyodideResult>;
 
+// Example Python code snippets for demonstration
 const EXAMPLE_CODES = [
   {
     name: "Basic Calculation",
@@ -38,7 +42,9 @@ const EXAMPLE_CODES = [
   }
 ];
 
+// Pyodide interactive test page for running Python code in-browser
 export default function PyodideTestPage() {
+  // State for Pyodide loading, code input, execution result, and running indicator
   const [isLoading, setIsLoading] = useState(true);
   const [code, setCode] = useState(EXAMPLE_CODES[0].code);
   const [result, setResult] = useState<{

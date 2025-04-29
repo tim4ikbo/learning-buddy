@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
-// Import types only for TypeScript
+// Type definition for Pyodide execution result
+// Import types only for TypeScript (not included in the bundle)
 type PyodideResult = {
   result: string;
   error: string | null;
@@ -11,15 +12,18 @@ type PyodideResult = {
   stderr: string;
 };
 
-// We'll load these dynamically at runtime
+// Pyodide code execution function (dynamically loaded at runtime)
 let runPythonCode: (code: string) => Promise<PyodideResult>;
 
+// Props for PythonCodeExecutor: Python code to run and close handler
 interface PythonCodeExecutorProps {
   code: string;
   onClose: () => void;
 }
 
+// Component for executing Python code using Pyodide in the browser
 export const PythonCodeExecutor: React.FC<PythonCodeExecutorProps> = ({ code, onClose }) => {
+  // State for execution and loading indicators, and execution result
   const [isExecuting, setIsExecuting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [result, setResult] = useState<{
@@ -29,7 +33,7 @@ export const PythonCodeExecutor: React.FC<PythonCodeExecutorProps> = ({ code, on
     stderr: string;
   } | null>(null);
   
-  // Load the Pyodide module dynamically
+  // Dynamically load the Pyodide service module and initialize Pyodide
   useEffect(() => {
     const loadPyodideModule = async () => {
       try {
