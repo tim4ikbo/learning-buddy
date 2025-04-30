@@ -4,9 +4,9 @@
 
 // Type definitions for Pyodide interface - permissive to match Pyodide API
 interface PyodideInterface {
-  runPython: (code: string) => any;
-  runPythonAsync: (code: string) => Promise<any>;
-  loadPackagesFromImports: (imports: string) => Promise<any>;
+  runPython: (code: string) => unknown;
+  runPythonAsync: (code: string) => Promise<unknown>;
+  loadPackagesFromImports: (imports: string) => Promise<unknown>;
 }
 
 // Track the Pyodide instance and loading state (singleton pattern)
@@ -42,7 +42,7 @@ export async function initPyodide(): Promise<PyodideInterface> {
       await loadPyodideScript();
       
       // Access the global loadPyodide function that was loaded via the script tag
-      // @ts-ignore - loadPyodide is loaded globally by the script
+      // @ts-expect-error - loadPyodide is loaded globally by the script
       const pyodide = await window.loadPyodide({
         indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.27.4/full/',
       });
@@ -132,8 +132,8 @@ export async function runPythonCode(code: string): Promise<{
     const result = await Promise.race([executionPromise, timeoutPromise]);
     
     // Capture stdout and stderr
-    const stdout = pyodide.runPython("sys.stdout.getvalue()").toString();
-    const stderr = pyodide.runPython("sys.stderr.getvalue()").toString();
+    const stdout = String(pyodide.runPython("sys.stdout.getvalue()"));
+    const stderr = String(pyodide.runPython("sys.stderr.getvalue()"));
     
     return {
       result: result?.toString() || '',
@@ -143,16 +143,19 @@ export async function runPythonCode(code: string): Promise<{
     };
   } catch (error) {
     console.error('Python execution error:', error);
-    
+    let errorMessage = 'Unknown error';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
     try {
       // Try to capture stderr even if there was an error
       const pyodide = await initPyodide() as PyodideInterface;
-      const stderr = pyodide.runPython("sys.stderr.getvalue()").toString();
-      const stdout = pyodide.runPython("sys.stdout.getvalue()").toString();
+      const stderr = String(pyodide.runPython("sys.stderr.getvalue()"));
+      const stdout = String(pyodide.runPython("sys.stdout.getvalue()"));
       
       return {
         result: '',
-        error: (error as Error).message,
+        error: errorMessage,
         stdout,
         stderr
       };
@@ -160,7 +163,7 @@ export async function runPythonCode(code: string): Promise<{
       // If we can't even get stderr, just return the error message
       return {
         result: '',
-        error: (error as Error).message,
+        error: errorMessage,
         stdout: '',
         stderr: ''
       };

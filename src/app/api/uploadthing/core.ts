@@ -52,12 +52,16 @@ export const ourFileRouter = {
           poolId: input.poolId,
           uploadedAt: new Date().toISOString()
         };
-      } catch (error: any) {
-        console.error('Upload middleware error:', error);
-        throw new Error(error.message || 'Upload authorization failed');
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          console.error('Upload middleware error:', error);
+          throw new Error(error.message || 'Upload authorization failed');
+        } else {
+          throw new Error('Upload authorization failed');
+        }
       }
     })
-    .onUploadComplete(async ({ metadata, file }) => {
+    .onUploadComplete(async ({ metadata, file }: { metadata: { userId: string; poolId: string }, file: { url: string; name: string; size: number; type: string } }) => {
       if (!metadata?.userId || !metadata?.poolId) {
         console.error('Missing metadata:', metadata);
         throw new Error('Missing required upload metadata');
@@ -93,9 +97,13 @@ export const ourFileRouter = {
           url: file.url,
           key: fileId
         };
-      } catch (error: any) {
-        console.error('Upload completion error:', error);
-        throw new Error(error.message || 'Failed to process upload');
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          console.error('Upload completion error:', error);
+          throw new Error(error.message || 'Failed to process upload');
+        } else {
+          throw new Error('Failed to process upload');
+        }
       }
     }),
 } satisfies FileRouter;

@@ -48,14 +48,17 @@ export function AddPoolMemberButton() {
       toast.success(`Successfully added ${email} to the pool`)
       setEmail('')
       setIsOpen(false)
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle specific error messages and show notifications
       console.error('Error adding member:', error)
-      
-      if (error.message === 'User not found') {
-        toast.error(`No user found with email ${email}`)
-      } else if (error.message === 'User is already a member of this pool') {
-        toast.error(`${email} is already a member of this pool`)
+      if (error instanceof Error) {
+        if (error.message === 'User not found') {
+          toast.error(`No user found with email ${email}`)
+        } else if (error.message === 'User is already a member of this pool') {
+          toast.error(`${email} is already a member of this pool`)
+        } else {
+          toast.error('Failed to add member. Please try again.')
+        }
       } else {
         toast.error('Failed to add member. Please try again.')
       }

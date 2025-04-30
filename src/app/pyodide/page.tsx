@@ -15,7 +15,7 @@ type PyodideResult = {
 
 // Pyodide initialization and code execution functions
 // (loaded dynamically at runtime)
-let initPyodide: () => Promise<any>;
+let initPyodide: () => Promise<unknown>;
 let runPythonCode: (code: string) => Promise<PyodideResult>;
 
 // Example Python code snippets for demonstration
@@ -109,7 +109,7 @@ export default function PyodideTestPage() {
           <Loader2 className="w-12 h-12 animate-spin text-blue-600 mb-4" />
           <p className="text-lg">Loading Python interpreter...</p>
           <p className="text-sm text-gray-500 mt-2">
-            This may take a moment as we're downloading and initializing the Python environment.
+            This may take a moment as we&apos;re downloading and initializing the Python environment.
           </p>
         </div>
       ) : (

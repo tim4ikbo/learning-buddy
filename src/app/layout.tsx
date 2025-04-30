@@ -2,6 +2,7 @@
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { SessionProvider } from '@/components/providers/SessionProvider'
+import Script from 'next/script'
 import { auth } from '@/auth'
 
 // Initialize Inter font with Latin subset
@@ -26,7 +27,7 @@ export default async function RootLayout({
     <html lang="en">
       <head>
         {/* Inject Pyodide script for Python execution support */}
-        <script src="https://cdn.jsdelivr.net/pyodide/v0.27.4/full/pyodide.js"></script>
+        <Script src="https://cdn.jsdelivr.net/pyodide/v0.27.4/full/pyodide.js" strategy="beforeInteractive" />
       </head>
       <body className={inter.className}>
         {/* Provide session context to the entire app */}

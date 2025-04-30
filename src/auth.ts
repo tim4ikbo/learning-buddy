@@ -110,7 +110,7 @@ export const authConfig = {
     warn(code: string) {
       console.warn('Auth warning:', code)
     },
-    debug(code: string, metadata?: any) {
+    debug(code: string, metadata?: unknown) {
       console.debug('Auth debug:', code, metadata)
     }
   },

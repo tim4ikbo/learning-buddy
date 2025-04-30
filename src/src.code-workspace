@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"name": "src",
+			"path": "."
+		},
+		{
+			"name": "drizzle",
+			"path": "../drizzle"
+		},
+		{
+			"name": "node_modules",
+			"path": "../node_modules"
+		},
+		{
+			"name": "public",
+			"path": "../public"
+		}
+	],
+	"settings": {}
+}

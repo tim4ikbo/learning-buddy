@@ -2,6 +2,7 @@
 
 import React, { Suspense, lazy } from 'react';
 import { Stage, Layer, Image as KonvaImage, Transformer, Text as KonvaText } from 'react-konva';
+import Konva from 'konva';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUploadThing } from '@/utils/uploadthing';
 // Import removed: utapi is only available server-side
@@ -43,8 +44,8 @@ const PoolImage = ({ url, width, height, x, y, rotation = 0, onDragEnd, onTransf
   isSelected?: boolean;
   onSelect?: () => void;
 }) => {
-  const imageRef = useRef<any>(null);
-  const transformerRef = useRef<any>(null);
+  const imageRef = useRef<Konva.Image | null>(null);
+  const transformerRef = useRef<Konva.Transformer | null>(null);
   const [image] = useImage(url);
 
   useEffect(() => {
@@ -119,11 +120,11 @@ const PoolImage = ({ url, width, height, x, y, rotation = 0, onDragEnd, onTransf
   );
 };
 
-export interface PoolCanvasProps { }
+export type PoolCanvasProps = Record<string, unknown>; 
 
 type Params = {
   id: string;
-};
+}; 
 
 export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
   // State
@@ -135,7 +136,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
-  const [lastRememberedModified, setLastRememberedModified] = useState<number | null>(null);
+  const [lastRememberedModified] = useState<number | null>(null); 
   const [newText, setNewText] = useState('');
   const [textColor, setTextColor] = useState('#000000');
   const [isPythonCode, setIsPythonCode] = useState(false);
@@ -145,8 +146,8 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
   const [editingText, setEditingText] = useState('');
   // Hooks
   const params = useParams() as Params;
-  const stageRef = useRef<any>(null);
-  const trRef = useRef<any>(null);
+  const stageRef = useRef<Konva.Stage | null>(null);
+  const trRef = useRef<Konva.Transformer | null>(null);
 
   // Set up UploadThing for image uploads, with progress and completion handlers
   const { startUpload } = useUploadThing('imageUploader', {
@@ -243,18 +244,21 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
 
       const textNodes = stage.find('Text');
       // Find the node with matching id
-      const selectedNode = textNodes.find((node: any) => {
-        const textItem = textItems.find(item => item.id === selectedTextId);
-        return textItem &&
-          node.text() === textItem.text &&
-          node.x() === textItem.x &&
-          node.y() === textItem.y;
+      const selectedNode = textNodes.find((node: Konva.Node) => {
+        if (node instanceof Konva.Text) {
+          const textItem = textItems.find(item => item.id === selectedTextId);
+          return textItem &&
+            node.text() === textItem.text &&
+            node.x() === textItem.x &&
+            node.y() === textItem.y;
+        }
+        return false;
       });
 
-      if (selectedNode) {
+      if (selectedNode && trRef.current) {
         // Attach transformer to the selected node
         trRef.current.nodes([selectedNode]);
-        trRef.current.getLayer().batchDraw();
+        trRef.current.getLayer()?.batchDraw();
       }
     } else if (trRef.current) {
       // Clear nodes when nothing is selected
@@ -313,9 +317,14 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
             setImages(newImages);
             setSelectedId(null);
             toast.success('Image deleted');
-          } catch (error: any) {
+          } catch (error: unknown) {
+            let message = 'Failed to delete image';
+            if (error instanceof Error) {
+              message = error.message;
+            }
+
             console.error('Failed to delete image:', error);
-            toast.error(error.message || 'Failed to delete image');
+            toast.error(message);
           }
         }
       } else if (e.key === 'Escape') {
@@ -449,27 +458,15 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
 
       // Save canvas state
       await saveCanvasState();
-    } catch (error: any) {
+    } catch (error: unknown) {
+            let message = 'Failed to delete image';
+            if (error instanceof Error) {
+              message = error.message;
+            }
+
       console.error('Upload error:', error);
-      let errorMessage = 'Failed to upload images.';
 
-      if (error?.message?.includes('sign in')) {
-        errorMessage = 'Please sign in to upload images.';
-      } else if (error?.message?.includes('access to this pool')) {
-        errorMessage = 'You do not have access to this pool.';
-      } else if (error?.message?.includes('save file information')) {
-        errorMessage = 'Failed to save file information. Please try again.';
-      } else if (error?.message?.includes('LIMIT_FILE_SIZE')) {
-        errorMessage = 'File too large. Maximum size is 4MB.';
-      } else if (error?.message?.includes('INVALID_FILE_TYPE')) {
-        errorMessage = 'Invalid file type. Please upload only images.';
-      } else if (error?.message?.includes('server response')) {
-        errorMessage = 'Upload failed due to server error. Please try again.';
-      } else if (error.name === 'NetworkError' || !navigator.onLine) {
-        errorMessage = 'Network error. Please check your connection and try again.';
-      }
-
-      toast.error(errorMessage);
+      toast.error(message);
       console.log('Upload failed:', error);
     } finally {
       // Reset upload state after a short delay to show final progress
@@ -712,7 +709,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
             borderRadius: '0.5rem',
             boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)'
           }}
-          onClick={(e: any) => {
+          onClick={(e: Konva.KonvaEventObject<MouseEvent>) => {
             // Deselect when clicking on the stage background
             if (e.target === e.target.getStage()) {
               setSelectedId(null);
@@ -812,6 +809,7 @@ export const PoolCanvas: React.FC<PoolCanvasProps> = () => {
                         return newBox;
                       }}
                       onTransformEnd={() => {
+                        if (!trRef.current) return;
                         // Get the transformer node
                         const node = trRef.current.nodes()[0];
                         if (node) {

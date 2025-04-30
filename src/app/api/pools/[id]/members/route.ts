@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/db'
-import { pools, poolMembers, users } from '@/db/schema'
+import { poolMembers, users } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { auth } from '@/auth'
 import { nanoid } from 'nanoid'
