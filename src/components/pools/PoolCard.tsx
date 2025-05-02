@@ -93,7 +93,40 @@ export default function PoolCard({ pool, userId }: PoolCardProps) {
       setIsMenuOpen(false)
     }
   }
-
+  const changeName = async () => {
+    if (isLoading) return;
+    if (pool.creatorId !== userId) {
+      alert('Only the pool creator can change the name of the pool');
+      return;
+    }
+    const newName = window.prompt('Enter new pool name:', pool.name);
+    if (!newName || newName.trim() === pool.name) return;
+  
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/pools/${pool.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'rename', name: newName.trim() }),
+      });
+      if (!response.ok) throw new Error('Failed to rename pool');
+  
+      // Fetch updated pools data after renaming
+      const poolsResponse = await fetch('/api/pools');
+      if (poolsResponse.ok) {
+        const updatedPools = await poolsResponse.json();
+        setOriginalPools(updatedPools);
+        setFilteredPools(updatedPools);
+      }
+      router.refresh();
+    } catch (error) {
+      console.error('Error renaming pool:', error);
+      alert('Failed to rename pool. Please try again.');
+    } finally {
+      setIsLoading(false);
+      setIsMenuOpen(false);
+    }
+  };
   // Handler for deleting a pool (only creator can delete)
   const handleDeletePool = async () => {
     if (isLoading) return // Prevent duplicate requests
@@ -210,6 +243,14 @@ export default function PoolCard({ pool, userId }: PoolCardProps) {
             >
               {isLoading ? 'Processing...' : 'Delete Pool'}
             </button>
+            <button
+              onClick={changeName}
+              className="block w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-gray-100 disabled:opacity-50"
+              role="menuitem"
+              disabled={isLoading || pool.creatorId !== userId}
+              >
+            </button>
+              {isLoading ? 'Processing...' : 'Change name'}
           </div>
         </div>
       )}
